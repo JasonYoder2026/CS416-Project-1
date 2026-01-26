@@ -31,7 +31,7 @@ public class Host {
 
         socket = new DatagramSocket(port);
         System.out.println("Host " + id + " listening on " + ip + ":" + port);
-        System.out.println("Host " + id + "will connect to switch " + switchID + " at " + switchIP + " - " + switchPort);
+        System.out.println("Host " + id + " will connect to switch " + switchID + " at " + switchIP + " - " + switchPort);
     }
 
     public void listen() throws IOException {
