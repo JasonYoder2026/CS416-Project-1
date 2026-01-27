@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.net.*;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,7 +18,18 @@ public class Host {
                 try {
                     socket.receive(packet);
                     Frame frame = Frame.fromBytes(packet.getData());
-                    System.out.println(id + " received: " + frame);
+
+                    String msg = frame.getPayload();
+                    String src = frame.getSrcMAC();
+                    String dst = frame.getDstMAC();
+
+                    // Print debug message if destination ID is different then Host's own ID
+                    if(dst.equals(id)){
+                        System.out.println(id + " received message from " + src + ": " + msg);
+                    }
+                    else {
+                        System.out.println("DEBUG: Flood frame! Frame intended for " + dst + " but " + id + " has received it");
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -110,6 +122,25 @@ public class Host {
         Host host = new Host(myID, parser);
 
         //WILL WANT TO CREATE THE INTERFACE HERE TO LET THE USER TYPE WHAT THEY WANT TO SEND AND THEN CALL SEND
-        host.sendFrame("A","Hello!");
+        Scanner scn = new Scanner(System.in);
+        System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
+        while(true){
+            if(scn.hasNextLine()){
+                String line = scn.nextLine();
+                if(line.equalsIgnoreCase("q")){
+                    System.out.println("Shutting down Host: " + myID + "...");
+                    System.exit(0);
+                }
+                String[] parts = line.split(" ",2);
+
+                if(parts.length == 2){
+                    String destId = parts[0];
+                    String message = parts[1];
+                    host.sendFrame(destId,message);
+                } else{
+                    System.out.println("Invalid format! Use: <Destination MAC Address> <Message>");
+                }
+            }
+        }
     }
 }
