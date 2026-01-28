@@ -129,7 +129,7 @@ public class Host {
                 String line = scn.nextLine();
                 if(line.equalsIgnoreCase("q")){
                     System.out.println("Shutting down Host: " + myID + "...");
-                    System.exit(0);
+                    break;
                 }
                 String[] parts = line.split(" ",2);
 
@@ -142,5 +142,6 @@ public class Host {
                 }
             }
         }
+        host.es.shutdown();
     }
 }
