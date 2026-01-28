@@ -93,7 +93,7 @@ public class Host {
         String switchID = neighbors.get(0);
         Parser.DeviceInfo sw = parser.getDevice(switchID);
         this.switchIP = sw.ip;
-        this.switchPort = 5001; //Changes this to the port because i set run config to be A and changed to send to myself switch back to sw.port
+        this.switchPort = sw.port;
 
         socket = new DatagramSocket(port);
         es = Executors.newFixedThreadPool(8);
