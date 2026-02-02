@@ -30,6 +30,8 @@ public class Host {
                     else {
                         System.out.println("DEBUG: Flood frame! Frame intended for " + dst + " but " + id + " has received it");
                     }
+
+                    System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
