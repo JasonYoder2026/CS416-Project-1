@@ -7,11 +7,13 @@ public class Parser {
         public final String id;
         public final String ip;
         public final int port;
+        public final List<String> macs;
 
-        public DeviceInfo(String id, String ip, int port) {
+        public DeviceInfo(String id, String ip, int port, List<String> macs) {
             this.id = id;
             this.ip = ip;
             this.port = port;
+            this.macs = macs;
         }
     }
 
@@ -37,7 +39,10 @@ public class Parser {
                 String ip = parts[2];
                 int port = Integer.parseInt(parts[3]);
 
-                devices.put(id, new DeviceInfo(id, ip, port));
+                String macField = parts[4];
+                List<String> macs = Arrays.asList(macField.split("-"));
+
+                devices.put(id, new DeviceInfo(id, ip, port, macs));
                 links.putIfAbsent(id, new ArrayList<>());
             }
 
@@ -60,6 +65,17 @@ public class Parser {
         return devices.get(id);
     }
 
+    public List<String> getMac(String id) {
+        DeviceInfo info = getDevice(id);
+        if (info == null) {
+            System.out.println("No device found for: " + id);
+            return Collections.emptyList();
+        }
+
+        System.out.println("MACs: " + info.macs);
+        return info.macs;
+    }
+
     public List<String> getConnections(String id) {
         return links.getOrDefault(id, new ArrayList<>());
     }
@@ -68,3 +84,4 @@ public class Parser {
         return devices.keySet();
     }
 }
+

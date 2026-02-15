@@ -42,10 +42,17 @@ public class Host {
     class SendThread implements Runnable{
 
         String dstMAC;
+        String dstIP;
         String payload;
 
         SendThread(String dstMAC, String payload){
             this.dstMAC = dstMAC;
+            //TODO: Add code in case dstMAC needs to be gateway router instead
+            //if(dstIP.subnet == this.subnet)"
+            //  sendto(dstIP)
+            //else:
+            //  sendto(gatewayrouter
+            this.dstIP = dstMAC;
             this.payload = payload;
         }
 
@@ -53,7 +60,7 @@ public class Host {
         public void run() {
 
             try {
-                Frame f = new Frame(id, dstMAC, payload);
+                Frame f = new Frame(id, dstIP, id, dstMAC, payload);
                 byte[] data = f.toBytes();
 
                 DatagramPacket packet = new DatagramPacket(
@@ -84,6 +91,7 @@ public class Host {
         this.id = id;
 
         Parser.DeviceInfo me = parser.getDevice(id);
+        List<String> myMAC = parser.getMac(id);
         this.ip = me.ip;
         this.port = me.port;
 

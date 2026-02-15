@@ -2,8 +2,10 @@ import java.io.*;
 
 public class Frame implements Serializable {
 
-    private final String srcMAC;
-    private final String dstMAC;
+    private static String srcMAC;
+    private static String dstMAC;
+    private final String srcIP;
+    private final String dstIP;
     private final String payload;
 
     public byte[] toBytes() throws IOException {
@@ -24,9 +26,11 @@ public class Frame implements Serializable {
         }
     }
 
-    public Frame(String srcMAC, String dstMAC, String payload) {
+    public Frame(String srcMAC, String dstMAC, String srcIP, String dstIP, String payload) {
         this.srcMAC = srcMAC;
         this.dstMAC = dstMAC;
+        this.srcIP = srcIP;
+        this.dstIP = dstIP;
         this.payload = payload;
     }
 
@@ -34,8 +38,24 @@ public class Frame implements Serializable {
         return srcMAC;
     }
 
+    public void chgSrcMAC(String sourceMAC){
+        this.srcMAC = sourceMAC;
+    }
+
     public String getDstMAC() {
         return dstMAC;
+    }
+
+    public void chgDstMAC(String destMAC){
+        this.dstMAC = destMAC;
+    }
+
+    public String getSrcIP() {
+        return srcIP;
+    }
+
+    public String getDstIP() {
+        return dstIP;
     }
 
     public String getPayload() {
@@ -47,6 +67,8 @@ public class Frame implements Serializable {
         return "Frame{" +
                 "srcMAC='" + srcMAC + '\'' +
                 ", dstMAC='" + dstMAC + '\'' +
+                "srcIP='" + srcIP + '\'' +
+                "dstIP='" + dstIP + '\'' +
                 ", payload='" + payload + '\'' +
                 '}';
     }
