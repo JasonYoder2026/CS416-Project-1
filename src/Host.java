@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 public class Host {
 
@@ -45,14 +46,9 @@ public class Host {
         String dstIP;
         String payload;
 
-        SendThread(String dstMAC, String payload){
+        SendThread(String dstIP,String dstMAC, String payload){
+            this.dstIP = dstIP;
             this.dstMAC = dstMAC;
-            //TODO: Add code in case dstMAC needs to be gateway router instead
-            //if(dstIP.subnet == this.subnet)"
-            //  sendto(dstIP)
-            //else:
-            //  sendto(gatewayrouter
-            this.dstIP = dstMAC;
             this.payload = payload;
         }
 
@@ -60,7 +56,7 @@ public class Host {
         public void run() {
 
             try {
-                Frame f = new Frame(id, dstIP, id, dstMAC, payload);
+                Frame f = new Frame(ip, dstIP, id, dstMAC, payload);
                 byte[] data = f.toBytes();
 
                 DatagramPacket packet = new DatagramPacket(
@@ -81,8 +77,12 @@ public class Host {
 
     private final String id;
     private final String ip;
+    private final String subnet;
+    //private final String gatewayRouter;
+    private final List<String> myMac;
     private final int port;
     private final String switchIP;
+    private final String switchMac;
     private final int switchPort;
     private DatagramSocket socket;
     private ExecutorService es;
@@ -91,8 +91,9 @@ public class Host {
         this.id = id;
 
         Parser.DeviceInfo me = parser.getDevice(id);
-        List<String> myMAC = parser.getMac(id);
+        this.myMac = parser.getMac(id);
         this.ip = me.ip;
+        this.subnet = ip.split(Pattern.quote("."))[0];
         this.port = me.port;
 
         List<String> neighbors = parser.getConnections(id);
@@ -104,6 +105,8 @@ public class Host {
         Parser.DeviceInfo sw = parser.getDevice(switchID);
         this.switchIP = sw.ip;
         this.switchPort = sw.port;
+        this.switchMac = sw.macs.get(0);
+        System.out.println(switchMac);
 
         socket = new DatagramSocket(port);
         es = Executors.newFixedThreadPool(8);
@@ -116,8 +119,13 @@ public class Host {
         es.submit(new ListenThread());
     }
 
-    public void sendFrame(String dstMAC, String payload) throws IOException {
-        es.submit(new SendThread(dstMAC,payload));
+    public void sendFrame(String destIP, String payload) throws IOException {
+
+        if(destIP.split(Pattern.quote("."))[0] == subnet) {
+            es.submit(new SendThread(switchMac,switchIP,payload));
+        }else{
+            //es.submit(new SendThread(switchMac,switchIP,payload)); Change to gateway router
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -144,9 +152,9 @@ public class Host {
                 String[] parts = line.split(" ",2);
 
                 if(parts.length == 2){
-                    String destId = parts[0];
+                    String destIP = parts[0];
                     String message = parts[1];
-                    host.sendFrame(destId,message);
+                    host.sendFrame(destIP,message);
                 } else{
                     System.out.println("Invalid format! Use: <Destination MAC Address> <Message>");
                 }
