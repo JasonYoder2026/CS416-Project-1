@@ -19,6 +19,7 @@ public class Parser {
 
     private final Map<String, DeviceInfo> devices = new HashMap<>();
     private final Map<String, List<String>> links = new HashMap<>();
+    private final Map<String, List<String>> macMap = new HashMap<>();
 
     public Parser(String filename) throws IOException {
         parseConfig(filename);
@@ -41,8 +42,8 @@ public class Parser {
 
                 String macField = parts[4];
                 List<String> macs = Arrays.asList(macField.split("-"));
-
                 devices.put(id, new DeviceInfo(id, ip, port, macs));
+                macMap.put(id, macs);
                 links.putIfAbsent(id, new ArrayList<>());
             }
 
@@ -72,8 +73,12 @@ public class Parser {
             return Collections.emptyList();
         }
 
-        System.out.println("MACs: " + info.macs);
+        System.out.println("MACs for " + id + ": " + info.macs);
         return info.macs;
+    }
+
+    public Map<String, List<String>> getAllMacs() {
+        return macMap;
     }
 
     public List<String> getConnections(String id) {
@@ -84,4 +89,3 @@ public class Parser {
         return devices.keySet();
     }
 }
-
