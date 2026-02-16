@@ -22,14 +22,15 @@ public class Host {
 
                     String msg = frame.getPayload();
                     String src = frame.getSrcMAC();
-                    String dst = frame.getDstMAC();
+                    String dstMAC = frame.getDstMAC();
+                    String dstIP = frame.getDstIP();
 
                     // Print debug message if destination ID is different then Host's own ID
-                    if(dst.equals(id)){
+                    if(dstMAC.equals(myMac) && dstIP.equals(ip)){
                         System.out.println(id + " received message from " + src + ": " + msg);
                     }
                     else {
-                        System.out.println("DEBUG: Flood frame! Frame intended for " + dst + " but " + id + " has received it");
+                        System.out.println("DEBUG: Flood frame! Frame intended for " + dstMAC + " but " + id + " has received it");
                     }
 
                     System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
