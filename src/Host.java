@@ -79,7 +79,7 @@ public class Host {
     private final String ip;
     private final String subnet;
     //private final String gatewayRouter;
-    private final List<String> myMac;
+    //private final List<String> myMac;
     private final int port;
     private final String switchIP;
     private final String switchMac;
@@ -91,7 +91,8 @@ public class Host {
         this.macAdress = id;
 
         Parser.DeviceInfo me = parser.getDevice(id);
-        this.myMac = parser.getMac(id);
+        //this.myMac = parser.getMac(id);
+        List<String> myVIP = parser.getVip(id);
         this.ip = me.ip;
         this.subnet = ip.split(Pattern.quote("."))[0];
         this.port = me.port;
@@ -101,11 +102,14 @@ public class Host {
             throw new IllegalStateException("Host must have exactly one switch neighbor.");
         }
 
+        parser.getGateway(id);
+
         String switchID = neighbors.get(0);
         Parser.DeviceInfo sw = parser.getDevice(switchID);
         this.switchIP = sw.ip;
         this.switchPort = sw.port;
-        this.switchMac = sw.macs.get(0);
+        // macs must have gotten renamed to vips
+        this.switchMac = sw.vips.get(0);
         System.out.println(switchMac);
 
         socket = new DatagramSocket(port);
