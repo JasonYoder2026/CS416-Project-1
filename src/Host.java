@@ -100,6 +100,8 @@ public class Host {
             throw new IllegalStateException("Host must have exactly one switch neighbor.");
         }
 
+        parser.getGateway(id);
+
         String switchID = neighbors.get(0);
         Parser.DeviceInfo sw = parser.getDevice(switchID);
         this.switchIP = sw.ip;
