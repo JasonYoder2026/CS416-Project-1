@@ -23,10 +23,9 @@ public class Host {
                     String msg = frame.getPayload();
                     String src = frame.getSrcMAC();
                     String dstMAC = frame.getDstMAC();
-                    String dstIP = frame.getDstIP();
 
                     // Print debug message if destination ID is different then Host's own ID
-                    if(dstMAC.equals(myMac) && dstIP.equals(ip)){
+                    if(dstMAC.equals(id) ){
                         System.out.println(id + " received message from " + src + ": " + msg);
                     }
                     else {
