@@ -25,11 +25,11 @@ public class Host {
                     String dstMAC = frame.getDstMAC();
 
                     // Print debug message if destination ID is different then Host's own ID
-                    if(dstMAC.equals(id) ){
-                        System.out.println(id + " received message from " + src + ": " + msg);
+                    if(dstMAC.equals(macAdress) ){
+                        System.out.println(macAdress + " received message from " + src + ": " + msg);
                     }
                     else {
-                        System.out.println("DEBUG: Flood frame! Frame intended for " + dstMAC + " but " + id + " has received it");
+                        System.out.println("DEBUG: Flood frame! Frame intended for " + dstMAC + " but " + macAdress + " has received it");
                     }
 
                     System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
@@ -56,7 +56,7 @@ public class Host {
         public void run() {
 
             try {
-                Frame f = new Frame(ip, dstIP, id, dstMAC, payload);
+                Frame f = new Frame(ip, dstIP, macAdress, dstMAC, payload);
                 byte[] data = f.toBytes();
 
                 DatagramPacket packet = new DatagramPacket(
@@ -67,7 +67,7 @@ public class Host {
                 );
 
                 socket.send(packet);
-                System.out.println(id + " sent frame to " + dstMAC);
+                System.out.println(macAdress + " sent frame to " + dstMAC);
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -75,7 +75,7 @@ public class Host {
         }
     }
 
-    private final String id;
+    private final String macAdress;
     private final String ip;
     private final String subnet;
     //private final String gatewayRouter;
@@ -88,7 +88,7 @@ public class Host {
     private ExecutorService es;
 
     public Host(String id, Parser parser) throws IOException {
-        this.id = id;
+        this.macAdress = id;
 
         Parser.DeviceInfo me = parser.getDevice(id);
         this.myMac = parser.getMac(id);
