@@ -25,11 +25,11 @@ public class Host {
                     String dstMAC = frame.getDstMAC();
 
                     // Print debug message if destination ID is different then Host's own ID
-                    if(dstMAC.equals(macAdress) ){
-                        System.out.println(macAdress + " received message from " + src + ": " + msg);
+                    if(dstMAC.equals(macAddress) ){
+                        System.out.println(macAddress + " received message from " + src + ": " + msg);
                     }
                     else {
-                        System.out.println("DEBUG: Flood frame! Frame intended for " + dstMAC + " but " + macAdress + " has received it");
+                        System.out.println("DEBUG: Flood frame! Frame intended for " + dstMAC + " but " + macAddress + " has received it");
                     }
 
                     System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
@@ -41,7 +41,6 @@ public class Host {
     }
 
     class SendThread implements Runnable{
-
         String dstMAC;
         String dstIP;
         String payload;
@@ -51,12 +50,10 @@ public class Host {
             this.dstMAC = dstMAC;
             this.payload = payload;
         }
-
         @Override
         public void run() {
-
             try {
-                Frame f = new Frame(ip, dstIP, macAdress, dstMAC, payload);
+                Frame f = new Frame(macAddress, dstMAC, virtualIP, dstIP, payload);
                 byte[] data = f.toBytes();
 
                 DatagramPacket packet = new DatagramPacket(
@@ -65,9 +62,8 @@ public class Host {
                         InetAddress.getByName(switchIP),
                         switchPort
                 );
-
                 socket.send(packet);
-                System.out.println(macAdress + " sent frame to " + dstMAC);
+                System.out.println(macAddress + " sent frame to " + dstMAC);
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -75,7 +71,7 @@ public class Host {
         }
     }
 
-    private final String macAdress;
+    private final String macAddress; // misspelled address 'adress' initially
     private final String ip;
     private final String subnet;
     //private final String gatewayRouter;
@@ -86,15 +82,22 @@ public class Host {
     private final int switchPort;
     private DatagramSocket socket;
     private ExecutorService es;
+    private final String virtualIP;
+    private final String gatewayMAC;
 
     public Host(String id, Parser parser) throws IOException {
-        this.macAdress = id;
+        this.macAddress = id;
+
+        List<String> myVIP = parser.getVip(id);
+        this.virtualIP = myVIP.getFirst();
+        this.subnet = this.virtualIP.split("\\.")[0];
+
+        String gatewayVIP = parser.getGateway(id);
+        this.gatewayMAC = gatewayVIP.split("\\.")[1];
 
         Parser.DeviceInfo me = parser.getDevice(id);
         //this.myMac = parser.getMac(id);
-        List<String> myVIP = parser.getVip(id);
         this.ip = me.ip;
-        this.subnet = ip.split(Pattern.quote("."))[0];
         this.port = me.port;
 
         List<String> neighbors = parser.getConnections(id);
@@ -102,14 +105,13 @@ public class Host {
             throw new IllegalStateException("Host must have exactly one switch neighbor.");
         }
 
-        parser.getGateway(id);
 
-        String switchID = neighbors.get(0);
+        String switchID = neighbors.getFirst();
         Parser.DeviceInfo sw = parser.getDevice(switchID);
         this.switchIP = sw.ip;
         this.switchPort = sw.port;
         // macs must have gotten renamed to vips
-        this.switchMac = sw.vips.get(0);
+        this.switchMac = sw.vips.getFirst();
         System.out.println(switchMac);
 
         socket = new DatagramSocket(port);
@@ -123,13 +125,17 @@ public class Host {
         es.submit(new ListenThread());
     }
 
-    public void sendFrame(String destIP, String payload) throws IOException {
+    public void sendFrame(String destVIP, String payload) throws IOException {
+        String destSubnet = destVIP.split("\\.")[0];
+        String nextHopMAC;
 
-        if(destIP.split(Pattern.quote("."))[0] == subnet) {
-            es.submit(new SendThread(switchMac,switchIP,payload));
-        }else{
-            //es.submit(new SendThread(switchMac,switchIP,payload)); Change to gateway router
+        if (destSubnet.equals(this.subnet)) {
+            nextHopMAC = destVIP.split("\\.")[1];
+        } else {
+            nextHopMAC = this.gatewayMAC;
         }
+
+        es.submit(new SendThread(destVIP, nextHopMAC, payload));
     }
 
     public static void main(String[] args) throws Exception {
