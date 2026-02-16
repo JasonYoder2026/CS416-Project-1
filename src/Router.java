@@ -22,10 +22,32 @@ public class Router {
 
         socket = new DatagramSocket(port);
 
+        parsePorts();
         loadIpForwarding();
+    }
+
+    private void parsePorts() {
+
     }
 
     private void loadIpForwarding() {
 
+    }
+
+    private void listen() {
+
+    }
+
+    static void main(String args[]) throws IOException {
+        if (args.length != 1) {
+            System.err.println("Usage: Switch <ID>");
+            return;
+        }
+
+        String myID = args[0];
+        Parser parser = new Parser("config.txt");
+
+        Router router = new Router(myID, parser);
+        router.listen();
     }
 }
