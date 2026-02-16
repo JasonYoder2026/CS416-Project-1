@@ -8,20 +8,20 @@ public class Parser {
         public final String ip;
         public final String gateway;
         public final int port;
-        public final List<String> macs;
+        public final List<String> vips;
 
-        public DeviceInfo(String id, String ip, String gateway, int port, List<String> macs) {
+        public DeviceInfo(String id, String ip, String gateway, int port, List<String> vips) {
             this.id = id;
             this.ip = ip;
             this.gateway = gateway;
             this.port = port;
-            this.macs = macs;
+            this.vips = vips;
         }
     }
 
     private final Map<String, DeviceInfo> devices = new HashMap<>();
     private final Map<String, List<String>> links = new HashMap<>();
-    private final Map<String, List<String>> macMap = new HashMap<>();
+    private final Map<String, List<String>> vipMap = new HashMap<>();
     private final Map<String, String> subnetGateways = new HashMap<>();
 
     public Parser(String filename) throws IOException {
@@ -43,12 +43,11 @@ public class Parser {
                 String id = parts[1];
                 String ip = parts[2];
                 int port = Integer.parseInt(parts[3]);
-                String macField = parts[4];
-                List<String> macs = Arrays.asList(macField.split("-"));
+                String vipField = parts[4];
+                List<String> vips = Arrays.asList(vipField.split("-"));
 
-                // gateway assigned later
-                devices.put(id, new DeviceInfo(id, ip, null, port, macs));
-                macMap.put(id, macs);
+                devices.put(id, new DeviceInfo(id, ip, null, port, vips));
+                vipMap.put(id, vips);
                 links.putIfAbsent(id, new ArrayList<>());
             }
             else if (parts[0].equalsIgnoreCase("LINK")) {
@@ -73,17 +72,17 @@ public class Parser {
 
     private void assignGateways() {
         for (DeviceInfo d : devices.values()) {
-            String firstMac = d.macs.get(0);
-            String subnet = firstMac.split("\\.")[0];
+            String firstVip = d.vips.get(0);
+            String subnet = firstVip.split("\\.")[0];
 
-            String gatewayMac = subnetGateways.get(subnet);
+            String gatewayVip = subnetGateways.get(subnet);
 
             DeviceInfo updated = new DeviceInfo(
                     d.id,
                     d.ip,
-                    gatewayMac,
+                    gatewayVip,
                     d.port,
-                    d.macs
+                    d.vips
             );
 
             devices.put(d.id, updated);
@@ -94,15 +93,15 @@ public class Parser {
         return devices.get(id);
     }
 
-    public List<String> getMac(String id) {
+    public List<String> getVip(String id) {
         DeviceInfo info = getDevice(id);
         if (info == null) {
             System.out.println("No device found for: " + id);
             return Collections.emptyList();
         }
 
-        System.out.println("MACs for " + id + ": " + info.macs);
-        return info.macs;
+        System.out.println("VIPs for " + id + ": " + info.vips);
+        return info.vips;
     }
 
     public String getGateway(String id) {
@@ -116,8 +115,8 @@ public class Parser {
         return info.gateway;
     }
 
-    public Map<String, List<String>> getAllMacs() {
-        return macMap;
+    public Map<String, List<String>> getAllVips() {
+        return vipMap;
     }
 
     public List<String> getConnections(String id) {

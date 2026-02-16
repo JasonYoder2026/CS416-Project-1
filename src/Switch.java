@@ -18,7 +18,7 @@ public class Switch {
         this.id = id;
 
         Parser.DeviceInfo me = parser.getDevice(id);
-        List<String> myMAC = parser.getMac(id);
+        List<String> myVIP = parser.getVip(id);
         this.ip = me.ip;
         this.port = me.port;
 
