@@ -51,14 +51,18 @@ public class Parser {
                 links.putIfAbsent(id, new ArrayList<>());
             }
             else if (parts[0].equalsIgnoreCase("LINK")) {
-                String a = parts[1];
-                String b = parts[2];
+                String a = normalizeRouter(parts[1]);
+                String b = normalizeRouter(parts[2]);
 
                 links.putIfAbsent(a, new ArrayList<>());
                 links.putIfAbsent(b, new ArrayList<>());
 
                 links.get(a).add(b);
                 links.get(b).add(a);
+
+                for (Map.Entry<String, List<String>> entry : links.entrySet()) {
+                    System.out.println(entry.getKey() + " = " + entry.getValue());
+                }
             }
             else if (parts[0].equalsIgnoreCase("GATEWAY")) {
                 String subnet = parts[1];
@@ -68,6 +72,16 @@ public class Parser {
         }
 
         br.close();
+    }
+
+    private String normalizeRouter(String id) {
+        if (id.endsWith("L") || id.endsWith("R")) {
+            String base = id.substring(0, id.length() - 1);
+            if (base.equals("R1") || base.equals("R2")) {
+                return base;
+            }
+        }
+        return id;
     }
 
     private void assignGateways() {
