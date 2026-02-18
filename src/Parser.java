@@ -53,33 +53,12 @@ public class Parser {
             else if (parts[0].equalsIgnoreCase("LINK")) {
                 String a = parts[1];
                 String b = parts[2];
-                String aNormd = normalizeRouter(a);
-                String bNormd = normalizeRouter(b);
 
-                if(a != aNormd || b != bNormd){
-                    links.putIfAbsent(a, new ArrayList<>());
-                    links.putIfAbsent(b, new ArrayList<>());
+                links.putIfAbsent(a, new ArrayList<>());
+                links.putIfAbsent(b, new ArrayList<>());
 
-                    links.get(a).add(b);
-                    links.get(b).add(a);
-
-                    links.putIfAbsent(aNormd, new ArrayList<>());
-                    links.putIfAbsent(bNormd, new ArrayList<>());
-
-                    links.get(aNormd).add(bNormd);
-                    links.get(bNormd).add(aNormd);
-                }
-                else{
-                    links.putIfAbsent(a, new ArrayList<>());
-                    links.putIfAbsent(b, new ArrayList<>());
-
-                    links.get(a).add(b);
-                    links.get(b).add(a);
-                }
-
-                for (Map.Entry<String, List<String>> entry : links.entrySet()) {
-                    System.out.println(entry.getKey() + " = " + entry.getValue());
-                }
+                links.get(a).add(b);
+                links.get(b).add(a);
             }
             else if (parts[0].equalsIgnoreCase("GATEWAY")) {
                 String subnet = parts[1];
