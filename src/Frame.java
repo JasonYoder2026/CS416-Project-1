@@ -2,8 +2,8 @@ import java.io.*;
 
 public class Frame implements Serializable {
 
-    private static String srcMAC;
-    private static String dstMAC;
+    private String srcMAC;
+    private String dstMAC;
     private final String srcIP;
     private final String dstIP;
     private final String payload;
@@ -39,7 +39,7 @@ public class Frame implements Serializable {
     }
 
     public void chgSrcMAC(String sourceMAC){
-        this.srcMAC = sourceMAC;
+        srcMAC = sourceMAC;
     }
 
     public String getDstMAC() {
@@ -47,7 +47,7 @@ public class Frame implements Serializable {
     }
 
     public void chgDstMAC(String destMAC){
-        this.dstMAC = destMAC;
+        dstMAC = destMAC;
     }
 
     public String getSrcIP() {
