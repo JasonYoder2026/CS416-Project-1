@@ -51,14 +51,31 @@ public class Parser {
                 links.putIfAbsent(id, new ArrayList<>());
             }
             else if (parts[0].equalsIgnoreCase("LINK")) {
-                String a = normalizeRouter(parts[1]);
-                String b = normalizeRouter(parts[2]);
+                String a = parts[1];
+                String b = parts[2];
+                String aNormd = normalizeRouter(a);
+                String bNormd = normalizeRouter(b);
 
-                links.putIfAbsent(a, new ArrayList<>());
-                links.putIfAbsent(b, new ArrayList<>());
+                if(a != aNormd || b != bNormd){
+                    links.putIfAbsent(a, new ArrayList<>());
+                    links.putIfAbsent(b, new ArrayList<>());
 
-                links.get(a).add(b);
-                links.get(b).add(a);
+                    links.get(a).add(b);
+                    links.get(b).add(a);
+
+                    links.putIfAbsent(aNormd, new ArrayList<>());
+                    links.putIfAbsent(bNormd, new ArrayList<>());
+
+                    links.get(aNormd).add(bNormd);
+                    links.get(bNormd).add(aNormd);
+                }
+                else{
+                    links.putIfAbsent(a, new ArrayList<>());
+                    links.putIfAbsent(b, new ArrayList<>());
+
+                    links.get(a).add(b);
+                    links.get(b).add(a);
+                }
 
                 for (Map.Entry<String, List<String>> entry : links.entrySet()) {
                     System.out.println(entry.getKey() + " = " + entry.getValue());
