@@ -53,7 +53,14 @@ public class Host {
         @Override
         public void run() {
             try {
-                Frame f = new Frame(macAddress, dstMAC, virtualIP, dstIP, payload);
+                Frame f = new Frame(macAddress,dstMAC, virtualIP,dstIP, payload);
+                System.out.println(f.toString());
+//                System.out.println("Source: " + dstMAC);
+//                System.out.println("Dst Mac:" + macAddress);
+//                System.out.println("Source IP: " + virtualIP);
+//                System.out.println("Dest IP: " +dstIP);
+//                System.out.println(payload);
+
                 byte[] data = f.toBytes();
 
                 DatagramPacket packet = new DatagramPacket(
@@ -134,7 +141,7 @@ public class Host {
         } else {
             nextHopMAC = this.gatewayMAC;
         }
-
+        System.out.println(nextHopMAC);
         es.submit(new SendThread(destVIP, nextHopMAC, payload));
     }
 
@@ -151,7 +158,7 @@ public class Host {
 
         //WILL WANT TO CREATE THE INTERFACE HERE TO LET THE USER TYPE WHAT THEY WANT TO SEND AND THEN CALL SEND
         Scanner scn = new Scanner(System.in);
-        System.out.println("Enter destination and message (e.g., 'D hello') or q to quit:");
+        System.out.println("Enter destination and message (e.g., 'net3.D hello') or q to quit:");
         while(true){
             if(scn.hasNextLine()){
                 String line = scn.nextLine();
