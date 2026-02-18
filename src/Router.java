@@ -67,15 +67,15 @@ public class Router {
      * Manually load forwarding table
      */
     private void loadForwardingTable() {
-        for (Map.Entry<String, String> entry : subnetToNeighbor.entrySet()) {
-            ipForwardingTable.put(entry.getKey(), entry.getValue());
-        }
-
         if (id.equals("R1")) {
-            ipForwardingTable.put("net3", "R2");
+            ipForwardingTable.put("net1", "R1L");
+            ipForwardingTable.put("net2", "R1R");
+            ipForwardingTable.put("net3", "R2L");
 
         } else if (id.equals("R2")) {
-            ipForwardingTable.put("net1", "R1");
+            ipForwardingTable.put("net1", "R1R");
+            ipForwardingTable.put("net2", "R2L");
+            ipForwardingTable.put("net3", "R2R");
         }
     }
 
