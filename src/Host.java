@@ -21,7 +21,7 @@ public class Host {
                     Frame frame = Frame.fromBytes(packet.getData());
 
                     String msg = frame.getPayload();
-                    String src = frame.getSrcMAC();
+                    String src = frame.getSrcIP().split("\\.")[1];
                     String dstMAC = frame.getDstMAC();
 
                     // Print debug message if destination ID is different then Host's own ID
@@ -54,12 +54,6 @@ public class Host {
         public void run() {
             try {
                 Frame f = new Frame(macAddress,dstMAC, virtualIP,dstIP, payload);
-                System.out.println(f.toString());
-//                System.out.println("Source: " + dstMAC);
-//                System.out.println("Dst Mac:" + macAddress);
-//                System.out.println("Source IP: " + virtualIP);
-//                System.out.println("Dest IP: " +dstIP);
-//                System.out.println(payload);
 
                 byte[] data = f.toBytes();
 

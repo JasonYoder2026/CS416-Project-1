@@ -35,18 +35,23 @@ public class Router {
         List<String> myVips = parser.getVip(id);
 
         for (String vip : myVips) {
-            String[] parts = vip.split("\\.");
-            String subnet = parts[0];
-            String portName = parts[1];
+            String subnet = vip.split("\\.")[0];
 
-            List<String> neighbors = parser.getConnections(portName);
-            if (neighbors.isEmpty()) {
-                System.err.println("[" + id + "] No neighbor found on port " + portName);
-                continue;
+            // Find the neighbor that shares this subnet
+            List<String> allNeighbors = parser.getConnections(id);
+            for (String neighborEndpoint : allNeighbors) {
+                String neighborId = resolveDeviceId(neighborEndpoint);
+                List<String> neighborVips = parser.getVip(neighborId);
+                if (neighborVips == null) continue;
+
+                for (String neighborVip : neighborVips) {
+                    if (neighborVip.split("\\.")[0].equals(subnet)) {
+                        subnetToNeighbor.put(subnet, neighborId);
+                        System.out.println("[" + id + "] subnet " + subnet + " -> neighbor " + neighborId);
+                        break;
+                    }
+                }
             }
-            String neighborId = resolveDeviceId(neighbors.getFirst());
-            subnetToNeighbor.put(subnet, neighborId);
-            System.out.println("[" + id + "] subnet " + subnet + " -> neighbor " + neighborId + " (via port " + portName + ")");
         }
 
     }
@@ -103,12 +108,20 @@ public class Router {
      */
     private void forwardFrame(Frame frame) throws IOException {
         String dstSubnet = frame.getDstIP().split("\\.")[0];
+        String srcSubnet = frame.getSrcIP().split("\\.")[0];
+
+        if (srcSubnet.equals(dstSubnet)) {
+            System.out.println("[" + id + "] Dropping intra-subnet packet (src and dst on same subnet)");
+            return;
+        }
 
         if (subnetToNeighbor.containsKey(dstSubnet)) {
             String neighborId = subnetToNeighbor.get(dstSubnet);
 
+            String dstId = frame.getDstIP().split("\\.")[1];
+
             frame.chgSrcMAC(id);
-            frame.chgDstMAC(neighborId);
+            frame.chgDstMAC(dstId);
 
             sendFrame(frame, neighborId);
             return;
