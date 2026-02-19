@@ -6,7 +6,7 @@ public class Router {
     private final String id;
     private final String realIP;
     private final int realPort;
-    private DatagramSocket socket;
+    private final DatagramSocket socket;
     private final Parser parser;
 
     private final Map<String, String> ipForwardingTable = new HashMap<>();
@@ -44,7 +44,7 @@ public class Router {
                 System.err.println("[" + id + "] No neighbor found on port " + portName);
                 continue;
             }
-            String neighborId = resolveDeviceId(neighbors.get(0));
+            String neighborId = resolveDeviceId(neighbors.getFirst());
             subnetToNeighbor.put(subnet, neighborId);
             System.out.println("[" + id + "] subnet " + subnet + " -> neighbor " + neighborId + " (via port " + portName + ")");
         }
@@ -68,14 +68,14 @@ public class Router {
      */
     private void loadForwardingTable() {
         if (id.equals("R1")) {
-            ipForwardingTable.put("net1", "R1L");
-            ipForwardingTable.put("net2", "R1R");
-            ipForwardingTable.put("net3", "R2L");
+            //ipForwardingTable.put("net1", "net1.R1");
+            //ipForwardingTable.put("net2", "net2.R1");
+            ipForwardingTable.put("net3", "R2");
 
         } else if (id.equals("R2")) {
-            ipForwardingTable.put("net1", "R1R");
-            ipForwardingTable.put("net2", "R2L");
-            ipForwardingTable.put("net3", "R2R");
+            //ipForwardingTable.put("net1", "net2.R1");
+            //ipForwardingTable.put("net2", "net2.R2");
+            ipForwardingTable.put("net1", "R1");
         }
     }
 
@@ -104,33 +104,55 @@ public class Router {
     private void forwardFrame(Frame frame) throws IOException {
         String dstSubnet = frame.getDstIP().split("\\.")[0];
 
-        String entry = ipForwardingTable.get(dstSubnet);
-        if (entry == null) {
-            System.err.println("[" + id + "] No route for subnet: " + dstSubnet + "' — dropping.");
+        if (subnetToNeighbor.containsKey(dstSubnet)) {
+            String neighborId = subnetToNeighbor.get(dstSubnet);
+
+            frame.chgSrcMAC(id);
+            frame.chgDstMAC(neighborId);
+
+            sendFrame(frame, neighborId);
             return;
         }
 
-        String nextHopId = entry.contains(".") ? entry.split("\\.")[1] : entry;
+        String nextHopId = ipForwardingTable.get(dstSubnet);
+
+        if (nextHopId == null) {
+            System.err.println("No route for subnet: " + dstSubnet);
+            return;
+        }
 
         frame.chgSrcMAC(id);
         frame.chgDstMAC(nextHopId);
+        sendFrame(frame, nextHopId);
 
-        System.out.println("[" + id + "] Forwarding " + nextHopId + " to " + dstSubnet);
+        System.out.println("[" + id + "] Forwarding packet for " + nextHopId + " to " + dstSubnet);
 
-        Parser.DeviceInfo neighbor = parser.getDevice(nextHopId);
-        if (neighbor == null) {
-            System.err.println("[" + id + "] Unknown next-hop device: '" + nextHopId + "' — dropping.");
+
+    }
+
+    private void sendFrame(Frame frame, String deviceId) throws IOException {
+        Parser.DeviceInfo device = parser.getDevice(deviceId);
+
+        if (device == null) {
+            System.err.println("[" + id + "] Unknown device: " + deviceId + " — dropping.");
             return;
         }
 
         byte[] data = frame.toBytes();
-        DatagramPacket outPacket = new DatagramPacket(
-                data, data.length, InetAddress.getByName(neighbor.ip), neighbor.port
+
+        DatagramPacket packet = new DatagramPacket(
+                data,
+                data.length,
+                InetAddress.getByName(device.ip),
+                device.port
         );
-        socket.send(outPacket);
+
+        socket.send(packet);
+
+        System.out.println("[" + id + "] SENT to " + deviceId + ": " + frame);
     }
 
-    static void main(String args[]) throws IOException {
+    static void main(String[] args) throws IOException {
         if (args.length != 1) {
             System.err.println("Usage: Switch <ID>");
             return;
