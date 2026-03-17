@@ -1,17 +1,34 @@
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Router {
+
+    private static final int DV_INTERVAL_SEC = 5;
+    private static final int INFINITY = 1000000;
+
     private final String id;
     private final String realIP;
     private final int realPort;
     private final DatagramSocket socket;
     private final Parser parser;
 
-    private final Map<String, String> ipForwardingTable = new HashMap<>();
-    //subnet/port -> direct neighbor device
+    //direct neighbor devices
     private final Map<String, String> subnetToNeighbor = new HashMap<>();
+    //router neighbor devices
+    private final List<String> routerNeighbors = new ArrayList<>();
+
+    private static class DVEntry {
+        String nextHop;
+        int    cost;
+        DVEntry(String nextHop, int cost) { this.nextHop = nextHop; this.cost = cost; }
+    }
+
+    private final Map<String, DVEntry> dvTable = new HashMap<>();
+    private final Map<String, Map<String, Integer>> neighborDVs = new HashMap<>();
 
     public Router(String id, Parser parser) throws IOException {
         this.id = id;
@@ -25,7 +42,8 @@ public class Router {
         socket = new DatagramSocket(realPort);
 
         parsePorts();
-        loadForwardingTable();
+        initDVTable();
+        startDVBroadcast();
     }
 
     /**
@@ -37,9 +55,7 @@ public class Router {
         for (String vip : myVips) {
             String subnet = vip.split("\\.")[0];
 
-            // Find the neighbor that shares this subnet
-            List<String> allNeighbors = parser.getConnections(id);
-            for (String neighborEndpoint : allNeighbors) {
+            for (String neighborEndpoint : parser.getConnections(id)) {
                 String neighborId = resolveDeviceId(neighborEndpoint);
                 List<String> neighborVips = parser.getVip(neighborId);
                 if (neighborVips == null) continue;
@@ -54,6 +70,120 @@ public class Router {
             }
         }
 
+        for (String endpoint : parser.getConnections(id)) {
+            String neighborId = resolveDeviceId(endpoint);
+            if (neighborId.startsWith("R") && !routerNeighbors.contains(neighborId)) {
+                routerNeighbors.add(neighborId);
+                System.out.println("[" + id + "] router neighbor: " + neighborId);
+            }
+        }
+
+    }
+
+    /**
+     * Seed every direct subnet with cost 0 and no next hop
+     */
+    private void initDVTable() {
+        for (String vip : parser.getVip(id)) {
+            String subnet = vip.split("\\.")[0];
+            dvTable.put(subnet, new DVEntry(null, 0));
+            System.out.println("[" + id + "] DV init: " + subnet + " cost=0 (direct)");
+        }
+    }
+
+    /**
+     * Schedule periodic DV broadcasts. First broadcast on start.
+     */
+    private void startDVBroadcast() {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread scheduledBroadcast = new Thread(r, id + "-dv-broadcast");
+            scheduledBroadcast.setDaemon(true);
+            return scheduledBroadcast;
+        });
+
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                broadcastDV();
+            } catch (IOException e) {
+                System.err.println("[" + id + "] DV broadcast error: " + e.getMessage());
+            }
+        }, 0, DV_INTERVAL_SEC, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Serialize the DV table
+     */
+    private synchronized String serializeDV() {
+        StringBuilder sb = new StringBuilder();
+        for(Map.Entry<String, DVEntry> e: dvTable.entrySet()) {
+            if (!sb.isEmpty()) sb.append(",");
+            sb.append(e.getKey()).append(":").append(e.getValue().cost);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Parses incoming DVs
+     */
+    private static Map<String, Integer> parseDVPayload(String payload) {
+        Map<String, Integer> dv = new HashMap<>();
+        for (String token : payload.split(",")) {
+            String[] kv = token.split(":");
+            if (kv.length == 2) {
+                dv.put(kv[0], Integer.parseInt(kv[1]));
+            }
+        }
+        return dv;
+    }
+
+    /**
+     * Sends out DV
+     */
+    private void broadcastDV() throws IOException {
+        String payload = serializeDV();
+        for (String neighbor: routerNeighbors) {
+            Frame dvFrame = Frame.createRoutingUpdate(id, neighbor, payload);
+            sendFrame(dvFrame, neighbor);
+            System.out.println("[" + id + "] DV -> " + neighbor + " : " + payload);
+        }
+    }
+
+    /**
+     * Updates DV when neighboring router sends DV
+     * If any entry improves, re-broadcast
+     */
+
+    private synchronized void processDVUpdate(String neighborId, String payload) {
+        Map<String, Integer> neighborDV = parseDVPayload(payload);
+        neighborDVs.put(neighborId, neighborDV);
+
+        boolean improved = false;
+
+        for (Map.Entry<String, Integer> e : neighborDV.entrySet()) {
+            String subnet = e.getKey();
+            int neighborCost = e.getValue();
+
+            if (neighborCost >= INFINITY) continue;
+
+            int costViaNeighbor = 1 + neighborCost;
+
+            DVEntry currentDV = dvTable.get(subnet);
+            if (currentDV == null || costViaNeighbor < currentDV.cost) {
+                dvTable.put(subnet, new DVEntry(neighborId, costViaNeighbor));
+                System.out.println("[" + id + "] DV update: " + subnet
+                        + " via " + neighborId
+                        + " cost=" + costViaNeighbor);
+                improved = true;
+            }
+        }
+
+        if (improved) {
+            try {
+                broadcastDV();
+            } catch (IOException ex) {
+                System.err.println("[" + id + "] triggered-update error: " + ex.getMessage());
+            }
+        }
     }
 
     /**
@@ -69,22 +199,6 @@ public class Router {
     }
 
     /**
-     * Manually load forwarding table
-     */
-    private void loadForwardingTable() {
-        if (id.equals("R1")) {
-            //ipForwardingTable.put("net1", "net1.R1");
-            //ipForwardingTable.put("net2", "net2.R1");
-            ipForwardingTable.put("net3", "R2");
-
-        } else if (id.equals("R2")) {
-            //ipForwardingTable.put("net1", "net2.R1");
-            //ipForwardingTable.put("net2", "net2.R2");
-            ipForwardingTable.put("net1", "R1");
-        }
-    }
-
-    /**
      * Listen for incoming frames
      */
     private void listen() {
@@ -95,8 +209,14 @@ public class Router {
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 socket.receive(packet);
                 Frame frame = Frame.fromBytes(Arrays.copyOf(packet.getData(), packet.getLength()));
-                System.out.println("[" + id + "] RECEIVED:   " + frame);
-                forwardFrame(frame);
+                //check for packet type
+                if (frame.isRoutingUpdate()) {
+                    System.out.println("[" + id + "] DV received from " + frame.getSrcMAC());
+                    processDVUpdate(frame.getSrcMAC(), frame.getPayload());
+                } else {
+                    System.out.println("[" + id + "] RECEIVED: " + frame);
+                    forwardFrame(frame);
+                }
             } catch (IOException e) {
                 System.err.println("[" + id + "] Error: " + e.getMessage());
             }
@@ -127,20 +247,17 @@ public class Router {
             return;
         }
 
-        String nextHopId = ipForwardingTable.get(dstSubnet);
-
-        if (nextHopId == null) {
-            System.err.println("No route for subnet: " + dstSubnet);
+        DVEntry entry = dvTable.get(dstSubnet);
+        if (entry == null) {
+            System.err.println("[" + id + "] No route to subnet: " + dstSubnet + " — dropping.");
             return;
         }
 
         frame.chgSrcMAC(id);
-        frame.chgDstMAC(nextHopId);
-        sendFrame(frame, nextHopId);
+        frame.chgDstMAC(entry.nextHop);
+        sendFrame(frame, entry.nextHop);
 
-        System.out.println("[" + id + "] Forwarding packet for " + nextHopId + " to " + dstSubnet);
-
-
+        System.out.println("[" + id + "] Forwarding packet for " + entry.nextHop + " to " + dstSubnet);
     }
 
     private void sendFrame(Frame frame, String deviceId) throws IOException {

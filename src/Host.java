@@ -53,7 +53,7 @@ public class Host {
         @Override
         public void run() {
             try {
-                Frame f = new Frame(macAddress,dstMAC, virtualIP,dstIP, payload);
+                Frame f = new Frame(macAddress, dstMAC, virtualIP,dstIP, payload);
 
                 byte[] data = f.toBytes();
 
