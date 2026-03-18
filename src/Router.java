@@ -144,7 +144,7 @@ public class Router {
         for (String neighbor: routerNeighbors) {
             Frame dvFrame = Frame.createRoutingUpdate(id, neighbor, payload);
             sendFrame(dvFrame, neighbor);
-            System.out.println("[" + id + "] DV -> " + neighbor + " : " + payload);
+            //System.out.println("[" + id + "] DV -> " + neighbor + " : " + payload);
         }
     }
 
@@ -170,9 +170,9 @@ public class Router {
             DVEntry currentDV = dvTable.get(subnet);
             if (currentDV == null || costViaNeighbor < currentDV.cost) {
                 dvTable.put(subnet, new DVEntry(neighborId, costViaNeighbor));
-                System.out.println("[" + id + "] DV update: " + subnet
-                        + " via " + neighborId
-                        + " cost=" + costViaNeighbor);
+//                System.out.println("[" + id + "] DV update: " + subnet
+//                        + " via " + neighborId
+//                        + " cost=" + costViaNeighbor);
                 improved = true;
             }
         }
@@ -211,7 +211,7 @@ public class Router {
                 Frame frame = Frame.fromBytes(Arrays.copyOf(packet.getData(), packet.getLength()));
                 //check for packet type
                 if (frame.isRoutingUpdate()) {
-                    System.out.println("[" + id + "] DV received from " + frame.getSrcMAC());
+                    //System.out.println("[" + id + "] DV received from " + frame.getSrcMAC());
                     processDVUpdate(frame.getSrcMAC(), frame.getPayload());
                 } else {
                     System.out.println("[" + id + "] RECEIVED: " + frame);
@@ -279,7 +279,7 @@ public class Router {
 
         socket.send(packet);
 
-        System.out.println("[" + id + "] SENT to " + deviceId + ": " + frame);
+        //System.out.println("[" + id + "] SENT to " + deviceId + ": " + frame);
     }
 
     static void main(String[] args) throws IOException {
